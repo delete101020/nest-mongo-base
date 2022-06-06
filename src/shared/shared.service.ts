@@ -2,27 +2,33 @@ import { Document, Model } from 'mongoose';
 
 export class SharedService<T extends Document> {
   private readonly _model: Model<T>;
+  private _populateOnFind: string[] = [];
 
-  constructor(model: Model<T>) {
+  constructor(model: Model<T>, populateOnFind: string[] = []) {
     this._model = model;
+    this._populateOnFind = populateOnFind;
   }
 
-  async getAll(): Promise<T[]> {
-    return this._model.find().exec();
+  async getAll(condition = {}): Promise<T[]> {
+    return this._model.find(condition).populate(this._populateOnFind).exec();
   }
 
-  async getOne(value: any, queryBy = '_id'): Promise<T> {
+  async getOne(value: any, queryBy = '_id') {
     const query = {};
     query[queryBy] = value;
-    return this._model.findOne(query).exec();
+
+    return this._model.findOne(query).populate(this._populateOnFind).exec();
   }
 
-  async getById(id: string): Promise<T> {
-    return this._model.findById(id).exec();
+  async getById(id: string) {
+    return this._model.findById(id).populate(this._populateOnFind).exec();
   }
 
   async getByIds(ids: string[]): Promise<T[]> {
-    return this._model.find({ _id: { $in: ids } }).exec();
+    return this._model
+      .find({ _id: { $in: ids } })
+      .populate(this._populateOnFind)
+      .exec();
   }
 
   async createFromRequestBody(body: Partial<T>): Promise<T> {
@@ -51,7 +57,11 @@ export class SharedService<T extends Document> {
       .exec();
   }
 
-  async delete(id: string): Promise<T> {
+  async deleteOne(id: string): Promise<T> {
     return this._model.findByIdAndDelete(id).exec();
+  }
+
+  async delete(condition: Record<string, unknown>): Promise<T> {
+    return this._model.remove(condition).exec();
   }
 }

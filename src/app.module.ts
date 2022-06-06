@@ -6,7 +6,7 @@ import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigVar } from './shared/config/config.enum';
-import { HttpExceptionFilter } from './shared/filters';
+import { AllExceptionsFilter } from './shared/filters';
 import { TransformResponseInterceptor } from './shared/interceptors';
 import { SharedModule } from './shared/shared.module';
 import { UserModule } from './user/user.module';
@@ -45,7 +45,7 @@ import { AuthModule } from './auth/auth.module';
   providers: [
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: AllExceptionsFilter,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -1,6 +1,6 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards';
+import { RequestUser } from '../shared/decorators';
 import { User } from './models';
 import { UserService } from './user.service';
 
@@ -10,9 +10,8 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   @Get('me/profile')
-  async getProfile(@Req() req: Request) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...user } = req.user as User;
-    return user;
+  async getProfile(@RequestUser() user: User) {
+    const { password, ...profile } = user;
+    return profile;
   }
 }

@@ -1,12 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sign, SignOptions } from 'jsonwebtoken';
 import { genSalt, compare, hash } from 'bcryptjs';
 import { ConfigVar } from '../shared/config/config.enum';
-import { User, UserDocument } from '../user/models';
+import { Account, AccountType, User, UserDocument } from '../user/models';
 import { UserService } from '../user/user.service';
 import { RegisterDto } from './dtos';
-import { LoginMethod } from './models/login-method.enum';
 
 export const ACCESS_TOKEN = 'access';
 export const REFRESH_TOKEN = 'refresh';
@@ -41,11 +40,17 @@ export class AuthService {
   }
 
   async register(registerParams: RegisterDto) {
-    const { username, email, phone, password, firstName, lastName } =
-      registerParams;
+    const { email, phone, password, firstName, lastName } = registerParams;
+
+    // Check if email or phone already exists
+    const checkCondition = [];
+    if (email) checkCondition.push({ email });
+    if (phone) checkCondition.push({ phone });
+    const users = await this.userService.getAll({ $or: checkCondition });
+    if (users.length)
+      throw new BadRequestException('Email or phone already exists');
 
     const newUser = new User() as UserDocument;
-    newUser.username = username;
     newUser.email = email;
     newUser.phone = phone;
     newUser.firstName = firstName;
@@ -53,6 +58,11 @@ export class AuthService {
 
     const salt = await genSalt(10);
     newUser.password = await hash(password, salt);
+
+    const account = new Account();
+    account.type = AccountType.INTERNAL;
+    account.uid = `user_${new Date().getTime()}`;
+    newUser.accounts = [account];
 
     try {
       const user = await this.userService.create(newUser);
@@ -63,12 +73,10 @@ export class AuthService {
   }
 
   async login(user: User) {
-    const { _id, username, email, phone, firstName, lastName, role, status } =
-      user;
+    const { _id, email, phone, firstName, lastName, role, status } = user;
 
     const payload = {
       _id,
-      username,
       email,
       phone,
       firstName,
@@ -83,13 +91,19 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async validateUser(
-    identifier: string,
-    password: string,
-    loginMethod: LoginMethod = LoginMethod.EMAIL,
-  ) {
-    const user = await this.userService.getOne(identifier, loginMethod);
-    if (user && (await this.comparePassword(password, user.password))) {
+  async validateUser(identifier: string, password: string) {
+    const users = await this.userService.getAll({
+      $or: [
+        { email: identifier },
+        { phone: identifier },
+        { 'accounts.uid': identifier, 'accounts.type': AccountType.INTERNAL },
+      ],
+    });
+    console.log(users);
+    if (!users.length) return null;
+
+    const user = users[0];
+    if (await this.comparePassword(password, user.password)) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user.toJSON();
       return result;

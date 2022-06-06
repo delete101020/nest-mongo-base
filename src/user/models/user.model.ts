@@ -1,6 +1,6 @@
 import { SchemaFactory, Prop, Schema } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { UserRole, UserStatus } from '.';
+import { Account, AccountSchema, UserRole, UserStatus } from '.';
 
 export const USER_MODEL = 'User';
 export type UserDocument = User & Document;
@@ -8,9 +8,6 @@ export type UserDocument = User & Document;
 @Schema()
 export class User {
   _id: string;
-
-  @Prop()
-  username: string;
 
   @Prop()
   password: string;
@@ -32,6 +29,9 @@ export class User {
 
   @Prop()
   lastName: string;
+
+  @Prop({ type: [AccountSchema], default: [] })
+  accounts: Account[];
 
   @Prop()
   avatar: string;

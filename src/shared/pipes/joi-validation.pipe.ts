@@ -12,7 +12,10 @@ export class JoiValidationPipe implements PipeTransform {
   transform(value: any) {
     const { error } = this.schema.validate(value);
     if (error) {
-      throw new UnprocessableEntityException('Validation failed');
+      throw new UnprocessableEntityException({
+        message: 'Validation failed',
+        errors: error.details,
+      });
     }
     return value;
   }
